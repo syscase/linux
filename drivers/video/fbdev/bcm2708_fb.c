@@ -49,10 +49,10 @@ static const char *bcm2708_name = "BCM2708 FB";
 
 #define DRIVER_NAME "bcm2708_fb"
 
-static int fbwidth = 800;  /* module parameter */
-static int fbheight = 480; /* module parameter */
-static int fbdepth = 16;   /* module parameter */
-static int fbswap = 0;     /* module parameter */
+static int fbwidth = 1920;  /* module parameter */
+static int fbheight = 1080; /* module parameter */
+static int fbdepth = 32;   /* module parameter */
+static int fbswap = 1;     /* module parameter */
 
 //static u32 dma_busy_wait_threshold = 1<<15;
 //module_param(dma_busy_wait_threshold, int, 0644);
