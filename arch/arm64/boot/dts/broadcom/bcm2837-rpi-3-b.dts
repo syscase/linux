@@ -75,7 +75,7 @@
 			clocks = <&clk_osc>;
 		};
 
-		rng@7e104000 {
+		random: rng@7e104000 {
 			compatible = "brcm,bcm2835-rng";
 			reg = <0x7e104000 0x10>;
 		};
