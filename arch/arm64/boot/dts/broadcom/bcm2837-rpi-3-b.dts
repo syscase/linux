@@ -158,13 +158,19 @@
 			clocks = <&clocks BCM2835_CLOCK_VPU>;
 		};
 
+#if 0
 		sdhci: sdhci@7e300000 {
 			compatible = "brcm,bcm2835-sdhci";
 			reg = <0x7e300000 0x100>;
 			interrupts = <2 30>;
 			clocks = <&clocks BCM2835_CLOCK_EMMC>;
-			status = "disabled";
+                        overclock_50 = <0>;
+                        force_pio = <0>;
+                        pio_limit = <0>;
+                        debug = <0>;
+			bus-width = <4>;
 		};
+#endif
 
 		i2c1: i2c@7e804000 {
 			compatible = "brcm,bcm2835-i2c";
@@ -191,12 +197,37 @@
 			reg = <0x7e980000 0x10000>;
 			interrupts = <1 9>;
 		};
+
+		sdhost: sdhost@7e202000 {
+			compatible = "brcm,bcm2835-sdhost";
+			reg = <0x7e202000 0x100>;
+			interrupts = <2 24>;
+			clocks = <&clocks BCM2835_CLOCK_EMMC>;
+			dmas = <&dma 13>;
+			dma-names = "rx-tx";
+			brcm,overclock-50 = <0>;
+			brcm,pio-limit = <1>;
+			status = "disabled";
+		};
+
+		mmc: mmc@7e300000 {
+			compatible = "brcm,bcm2835-mmc";
+			reg = <0x7e300000 0x100>;
+			interrupts = <2 30>;
+			clocks = <&clocks BCM2835_CLOCK_EMMC>;
+			dmas = <&dma 11>;
+			dma-names = "rx-tx";
+			brcm,overclock-50 = <0>;
+			status = "disabled";
+		};
+
 	};
 
 	clocks {
 		compatible = "simple-bus";
 		#address-cells = <1>;
 		#size-cells = <0>;
+
 
 		/* The oscillator is the root of the clock tree. */
 		clk_osc: clock@3 {
@@ -308,7 +339,7 @@
 };
 
 / {
-	compatible = "raspberrypi,3-model-b", "brcm,bcm2837";
+	compatible = "raspberrypi,3-model-b", "brcm,bcm2837", "brcm,bcm2708";
 	model = "Raspberry Pi 3 Model B";
 
 	memory {
@@ -330,7 +361,12 @@
 };
 
 &gpio {
-	pinctrl-0 = <&gpioout &alt0 &i2s_alt0 &alt3>;
+	pinctrl-0 = <&sdhost_pins &gpioout &alt0 &i2s_alt0 &sdio_pins>;
+
+	sdhost_pins: sdhost_pins {
+		brcm,pins = <48 49 50 51 52 53>;
+		brcm,function = <BCM2835_FSEL_ALT0>; /* alt0 */
+	};
 
 	gpioout: gpioout {
 		brcm,pins = <6>;
@@ -348,13 +384,38 @@
 		brcm,function = <BCM2835_FSEL_ALT0>;
 	};
 
+#if 0
 	alt3: alt3 {
 		brcm,pins = <48 49 50 51 52 53>;
 		brcm,function = <BCM2835_FSEL_ALT3>;
 	};
+#endif
+
+	sdio_pins: sdio_pins {
+		brcm,pins =     <34 35 36 37 38 39>;
+		brcm,function = <BCM2835_FSEL_ALT3>; 
+		brcm,pull =     <0 2 2 2 2 2>;
+	};
+
 };
 
-&sdhci {
-        bus-width = <4>;
-        status = "okay";
+&sdhost {
+	bus-width = <4>;
+};
+
+&mmc {
+	non-removable;
+	bus-width = <4>;
+	brcm,overclock-50 = <0>;
+	status = "okay";
+};
+
+
+/ {
+	__overrides__ {
+		sd_overclock = <&sdhost>,"brcm,overclock-50:0";
+		sd_force_pio = <&sdhost>,"brcm,force-pio?";
+		sd_pio_limit = <&sdhost>,"brcm,pio-limit:0";
+		sd_debug     = <&sdhost>,"brcm,debug";
+	};
 };
