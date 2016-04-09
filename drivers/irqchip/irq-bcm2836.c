@@ -175,6 +175,11 @@ __exception_irq_entry bcm2836_arm_irqchip_handle_irq(struct pt_regs *regs)
 		u32 ipi = ffs(mbox_val) - 1;
 
 		writel(1 << ipi, mailbox0);
+#ifdef CONFIG_ARM64
+		dsb(ishst);
+#else
+		dsb();
+#endif
 		handle_IPI(ipi, regs);
 #endif
 	} else if (stat) {
