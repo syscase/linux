@@ -361,7 +361,7 @@
 };
 
 &gpio {
-	pinctrl-0 = <&sdhost_pins &gpioout &alt0 &i2s_alt0 &sdio_pins>;
+	pinctrl-0 = <&sdhost_pins &gpioout &alt0 &i2s_alt0 &sdio_pins &bt_pins>;
 
 	sdhost_pins: sdhost_pins {
 		brcm,pins = <48 49 50 51 52 53>;
@@ -397,6 +397,12 @@
 		brcm,pull =     <0 2 2 2 2 2>;
 	};
 
+
+	bt_pins: bt_pins {
+		brcm,pins = <43>;
+		brcm,function = <BCM2835_FSEL_ALT0>; /* alt0:GPCLK2 */
+		brcm,pull = <0>;
+	};
 };
 
 &sdhost {
