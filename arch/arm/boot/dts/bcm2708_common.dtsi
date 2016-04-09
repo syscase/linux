@@ -70,12 +70,22 @@
 			brcm,dma-channel-mask = <0x0f35>;
 		};
 
+#ifdef RPI364
+		intc: interrupt-controller@7e00b200 {
+			compatible = "brcm,bcm2835-armctrl-ic";
+			reg = <0x7e00b200 0x200>;
+			interrupt-controller;
+			#interrupt-cells = <2>;
+		};
+#else
+
 		intc: interrupt-controller@7e00b200 {
 			compatible = "brcm,bcm2708-armctrl-ic";
 			reg = <0x7e00b200 0x200>;
 			interrupt-controller;
 			#interrupt-cells = <2>;
 		};
+#endif
 
 		mailbox: mailbox@7e00b800 {
 			compatible = "brcm,bcm2835-mbox";
@@ -272,6 +282,14 @@
 			status = "disabled";
 		};
 
+#ifdef RPI364
+		usb: usb@7e980000 {
+			compatible = "brcm,bcm2835-usb";
+			reg = <0x7e980000 0x10000>;
+			interrupts = <1 9>;
+		};
+#else
+
 		usb: usb@7e980000 {
 			compatible = "brcm,bcm2708-usb";
 			reg = <0x7e980000 0x10000>,
@@ -279,6 +297,7 @@
 			interrupts = <2 0>,
 				     <1 9>;
 		};
+#endif
 
 		firmware: firmware {
 			compatible = "raspberrypi,bcm2835-firmware";
