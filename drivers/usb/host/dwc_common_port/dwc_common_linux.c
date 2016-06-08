@@ -340,7 +340,7 @@ void *__DWC_DMA_ALLOC(void *dma_ctx, uint32_t size, dwc_dma_t *dma_addr)
 #ifdef xxCOSIM /* Only works for 32-bit cosim */
 	void *buf = dma_alloc_coherent(dma_ctx, (size_t)size, dma_addr, GFP_KERNEL);
 #else
-	void *buf = dma_alloc_coherent(dma_ctx, (size_t)size, dma_addr, GFP_KERNEL | GFP_DMA32);
+	void *buf = dma_alloc_coherent(dma_ctx, (size_t)size, dma_addr, GFP_KERNEL);
 #endif
 	if (!buf) {
 		return NULL;
@@ -352,7 +352,7 @@ void *__DWC_DMA_ALLOC(void *dma_ctx, uint32_t size, dwc_dma_t *dma_addr)
 
 void *__DWC_DMA_ALLOC_ATOMIC(void *dma_ctx, uint32_t size, dwc_dma_t *dma_addr)
 {
-	void *buf = dma_alloc_coherent(NULL, (size_t)size, dma_addr, GFP_ATOMIC);
+	void *buf = dma_alloc_coherent(dma_ctx, (size_t)size, dma_addr, GFP_ATOMIC);
 	if (!buf) {
 		return NULL;
 	}

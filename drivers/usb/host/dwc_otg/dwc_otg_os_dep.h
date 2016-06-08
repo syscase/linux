@@ -76,7 +76,7 @@
 
 #ifdef PLATFORM_INTERFACE
 #include <linux/platform_device.h>
-#include <asm/mach/map.h>
+//#include <asm/mach/map.h>
 #endif
 
 /** The OS page size */

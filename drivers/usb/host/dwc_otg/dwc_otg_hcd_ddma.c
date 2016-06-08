@@ -75,12 +75,13 @@ static inline uint16_t frame_incr_val(dwc_otg_qh_t * qh)
 		: qh->interval);
 }
 
-static int desc_list_alloc(dwc_otg_qh_t * qh)
+static int desc_list_alloc(dwc_otg_hcd_t * hcd, dwc_otg_qh_t * qh)
 {
 	int retval = 0;
 
 	qh->desc_list = (dwc_otg_host_dma_desc_t *)
-	    DWC_DMA_ALLOC(sizeof(dwc_otg_host_dma_desc_t) * max_desc_num(qh),
+	    DWC_DMA_ALLOC(hcd->memctx,
+                          sizeof(dwc_otg_host_dma_desc_t) * max_desc_num(qh),
 			  &qh->desc_list_dma);
 
 	if (!qh->desc_list) {
@@ -106,10 +107,11 @@ static int desc_list_alloc(dwc_otg_qh_t * qh)
 
 }
 
-static void desc_list_free(dwc_otg_qh_t * qh)
+static void desc_list_free(dwc_otg_hcd_t * hcd, dwc_otg_qh_t * qh)
 {
 	if (qh->desc_list) {
-		DWC_DMA_FREE(max_desc_num(qh), qh->desc_list,
+		DWC_DMA_FREE(hcd->memctx,
+                             max_desc_num(qh), qh->desc_list,
 			     qh->desc_list_dma);
 		qh->desc_list = NULL;
 	}
@@ -126,7 +128,8 @@ static int frame_list_alloc(dwc_otg_hcd_t * hcd)
 	if (hcd->frame_list)
 		return 0;
 
-	hcd->frame_list = DWC_DMA_ALLOC(4 * MAX_FRLIST_EN_NUM,
+	hcd->frame_list = DWC_DMA_ALLOC(hcd->memctx, 
+                                        4 * MAX_FRLIST_EN_NUM,
 					&hcd->frame_list_dma);
 	if (!hcd->frame_list) {
 		retval = -DWC_E_NO_MEMORY;
@@ -143,7 +146,7 @@ static void frame_list_free(dwc_otg_hcd_t * hcd)
 	if (!hcd->frame_list)
 		return;
 
-	DWC_DMA_FREE(4 * MAX_FRLIST_EN_NUM, hcd->frame_list, hcd->frame_list_dma);
+	DWC_DMA_FREE(hcd->memctx, 4 * MAX_FRLIST_EN_NUM, hcd->frame_list, hcd->frame_list_dma);
 	hcd->frame_list = NULL;
 }
 
@@ -328,7 +331,7 @@ int dwc_otg_hcd_qh_init_ddma(dwc_otg_hcd_t * hcd, dwc_otg_qh_t * qh)
 		return -1;
 	}
 
-	retval = desc_list_alloc(qh);
+	retval = desc_list_alloc(hcd, qh);
 
 	if ((retval == 0)
 	    && (qh->ep_type == UE_ISOCHRONOUS || qh->ep_type == UE_INTERRUPT)) {
@@ -355,7 +358,7 @@ int dwc_otg_hcd_qh_init_ddma(dwc_otg_hcd_t * hcd, dwc_otg_qh_t * qh)
  */
 void dwc_otg_hcd_qh_free_ddma(dwc_otg_hcd_t * hcd, dwc_otg_qh_t * qh)
 {
-	desc_list_free(qh);
+	desc_list_free(hcd, qh);
 
 	/*
 	 * Channel still assigned due to some reasons.

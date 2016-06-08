@@ -336,8 +336,9 @@ struct fiq_channel_state {
  * It contains top-level state information.
  */
 struct fiq_state {
-	fiq_lock_t lock;
-	mphi_regs_t mphi_regs;
+	//fiq_lock_t lock;
+	spinlock_t lock;
+        mphi_regs_t mphi_regs;
 	void *dwc_regs_base;
 	dma_addr_t dma_base;
 	struct fiq_dma_blob *fiq_dmab;
@@ -355,9 +356,9 @@ struct fiq_state {
 	struct fiq_channel_state channel[0];
 };
 
-extern void fiq_fsm_spin_lock(fiq_lock_t *lock);
+//extern void fiq_fsm_spin_lock(fiq_lock_t *lock);
 
-extern void fiq_fsm_spin_unlock(fiq_lock_t *lock);
+//extern void fiq_fsm_spin_unlock(fiq_lock_t *lock);
 
 extern int fiq_fsm_too_late(struct fiq_state *st, int n);
 

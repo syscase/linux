@@ -36,7 +36,7 @@
 #include "dwc_otg_regs.h"
 
 #include <linux/jiffies.h>
-#include <asm/fiq.h>
+//#include <asm/fiq.h>
 
 
 extern bool microframe_schedule;
@@ -59,7 +59,7 @@ void notrace _fiq_print(FIQDBG_T dbg_lvl, char *fmt, ...)
 
 	if(dbg_lvl & dbg_lvl_req || dbg_lvl == FIQDBG_ERR)
 	{
-		local_fiq_disable();
+//		local_irq_disable();
 		snprintf(text, 9, "%4d%d:%d ", hfnum.b.frnum/8, hfnum.b.frnum%8, 8 - hfnum.b.frrem/937);
 		va_start(args, fmt);
 		vsnprintf(text+8, 9, fmt, args);
@@ -67,7 +67,7 @@ void notrace _fiq_print(FIQDBG_T dbg_lvl, char *fmt, ...)
 
 		memcpy(buffer + wptr, text, 16);
 		wptr = (wptr + 16) % sizeof(buffer);
-		local_fiq_enable();
+//		local_irq_enable();
 	}
 }
 #endif
@@ -99,8 +99,8 @@ int32_t dwc_otg_hcd_handle_intr(dwc_otg_hcd_t * dwc_otg_hcd)
 	/* Check if HOST Mode */
 	if (dwc_otg_is_host_mode(core_if)) {
 		if (fiq_enable) {
-			local_fiq_disable();
-			fiq_fsm_spin_lock(&dwc_otg_hcd->fiq_state->lock);
+//			local_irq_disable();
+//			fiq_fsm_spin_lock(&dwc_otg_hcd->fiq_state->lock);
 			/* Pull in from the FIQ's disabled mask */
 			gintmsk.d32 = gintmsk.d32 | ~(dwc_otg_hcd->fiq_state->gintmsk_saved.d32);
 			dwc_otg_hcd->fiq_state->gintmsk_saved.d32 = ~0;
@@ -116,10 +116,10 @@ int32_t dwc_otg_hcd_handle_intr(dwc_otg_hcd_t * dwc_otg_hcd)
 		}
 		gintsts.d32 &= gintmsk.d32;
 
-		if (fiq_enable) {
-			fiq_fsm_spin_unlock(&dwc_otg_hcd->fiq_state->lock);
-			local_fiq_enable();
-		}
+//		if (fiq_enable) {
+//			fiq_fsm_spin_unlock(&dwc_otg_hcd->fiq_state->lock);
+//			local_irq_enable();
+//		}
 
 		if (!gintsts.d32) {
 			goto exit_handler_routine;
@@ -165,11 +165,15 @@ int32_t dwc_otg_hcd_handle_intr(dwc_otg_hcd_t * dwc_otg_hcd)
 			gintmsk_data_t gintmsk = { .b.portintr = 1};
 			retval |= dwc_otg_hcd_handle_port_intr(dwc_otg_hcd);
 			if (fiq_enable) {
-				local_fiq_disable();
-				fiq_fsm_spin_lock(&dwc_otg_hcd->fiq_state->lock);
+                                unsigned long irqsave;
+//				local_irq_disable();
+//				fiq_fsm_spin_lock(&dwc_otg_hcd->fiq_state->lock);
+				spin_lock_irqsave(&dwc_otg_hcd->fiq_state->lock,irqsave);
+
 				DWC_MODIFY_REG32(&dwc_otg_hcd->core_if->core_global_regs->gintmsk, 0, gintmsk.d32);
-				fiq_fsm_spin_unlock(&dwc_otg_hcd->fiq_state->lock);
-				local_fiq_enable();
+//				fiq_fsm_spin_unlock(&dwc_otg_hcd->fiq_state->lock);
+//				local_irq_enable();
+                                spin_unlock_irqrestore(&dwc_otg_hcd->fiq_state->lock,irqsave);
 			} else {
 				DWC_MODIFY_REG32(&dwc_otg_hcd->core_if->core_global_regs->gintmsk, 0, gintmsk.d32);
 			}
@@ -209,8 +213,10 @@ exit_handler_routine:
 	if (fiq_enable)	{
 		gintmsk_data_t gintmsk_new;
 		haintmsk_data_t haintmsk_new;
-		local_fiq_disable();
-		fiq_fsm_spin_lock(&dwc_otg_hcd->fiq_state->lock);
+		unsigned long irqsave;
+                spin_lock_irqsave(&dwc_otg_hcd->fiq_state->lock,irqsave);
+//		local_irq_disable();
+//		fiq_fsm_spin_lock(&dwc_otg_hcd->fiq_state->lock);
 		gintmsk_new.d32 = *(volatile uint32_t *)&dwc_otg_hcd->fiq_state->gintmsk_saved.d32;
 		if(fiq_fsm_enable)
 			haintmsk_new.d32 = *(volatile uint32_t *)&dwc_otg_hcd->fiq_state->haintmsk_saved.d32;
@@ -233,9 +239,9 @@ exit_handler_routine:
 		haintmsk.d32 = DWC_READ_REG32(&core_if->host_if->host_global_regs->haintmsk);
 		/* Re-enable interrupts that the FIQ masked (first time round) */
 		FIQ_WRITE(dwc_otg_hcd->fiq_state->dwc_regs_base + GINTMSK, gintmsk.d32);
-		fiq_fsm_spin_unlock(&dwc_otg_hcd->fiq_state->lock);
-		local_fiq_enable();
-
+//		fiq_fsm_spin_unlock(&dwc_otg_hcd->fiq_state->lock);
+//		local_irq_enable();
+                spin_unlock_irqrestore(&dwc_otg_hcd->fiq_state->lock,irqsave);
 		if ((jiffies / HZ) > last_time) {
 			//dwc_otg_qh_t *qh;
 			//dwc_list_link_t *cur;
@@ -644,12 +650,15 @@ int32_t dwc_otg_hcd_handle_hc_intr(dwc_otg_hcd_t * dwc_otg_hcd)
 	if(fiq_fsm_enable)
 	{
 		/* check the mask? */
-		local_fiq_disable();
-		fiq_fsm_spin_lock(&dwc_otg_hcd->fiq_state->lock);
+//		local_irq_disable();
+//		fiq_fsm_spin_lock(&dwc_otg_hcd->fiq_state->lock);
+                unsigned long irqsave;
+                spin_lock_irqsave(&dwc_otg_hcd->fiq_state->lock,irqsave);
 		haint.b2.chint |= ~(dwc_otg_hcd->fiq_state->haintmsk_saved.b2.chint);
 		dwc_otg_hcd->fiq_state->haintmsk_saved.b2.chint = ~0;
-		fiq_fsm_spin_unlock(&dwc_otg_hcd->fiq_state->lock);
-		local_fiq_enable();
+//		fiq_fsm_spin_unlock(&dwc_otg_hcd->fiq_state->lock);
+//		local_irq_enable();
+                spin_unlock_irqrestore(&dwc_otg_hcd->fiq_state->lock,irqsave);
 	}
 
 	for (i = 0; i < dwc_otg_hcd->core_if->core_params->host_channels; i++) {
@@ -1083,11 +1092,14 @@ static void halt_channel(dwc_otg_hcd_t * hcd,
 			 */
 			gintmsk.b.nptxfempty = 1;
 			if (fiq_enable) {
-				local_fiq_disable();
-				fiq_fsm_spin_lock(&hcd->fiq_state->lock);
+                                unsigned long irqsave;
+//				local_irq_disable();
+//				fiq_fsm_spin_lock(&hcd->fiq_state->lock);
+                                spin_lock_irqsave(&hcd->fiq_state->lock,irqsave);
 				DWC_MODIFY_REG32(&global_regs->gintmsk, 0, gintmsk.d32);
-				fiq_fsm_spin_unlock(&hcd->fiq_state->lock);
-				local_fiq_enable();
+                                spin_unlock_irqrestore(&hcd->fiq_state->lock,irqsave);
+//				fiq_fsm_spin_unlock(&hcd->fiq_state->lock);
+//				local_irq_enable();
 			} else {
 				DWC_MODIFY_REG32(&global_regs->gintmsk, 0, gintmsk.d32);
 			}
@@ -1108,11 +1120,14 @@ static void halt_channel(dwc_otg_hcd_t * hcd,
 			 */
 			gintmsk.b.ptxfempty = 1;
 			if (fiq_enable) {
-				local_fiq_disable();
-				fiq_fsm_spin_lock(&hcd->fiq_state->lock);
+//				local_irq_disable();
+//				fiq_fsm_spin_lock(&hcd->fiq_state->lock);
+                                unsigned long irqsave;
+                                spin_lock_irqsave(&hcd->fiq_state->lock,irqsave);
 				DWC_MODIFY_REG32(&global_regs->gintmsk, 0, gintmsk.d32);
-				fiq_fsm_spin_unlock(&hcd->fiq_state->lock);
-				local_fiq_enable();
+                                spin_unlock_irqrestore(&hcd->fiq_state->lock,irqsave);
+//				fiq_fsm_spin_unlock(&hcd->fiq_state->lock);
+//				local_irq_enable();
 			} else {
 				DWC_MODIFY_REG32(&global_regs->gintmsk, 0, gintmsk.d32);
 			}
@@ -2417,7 +2432,7 @@ void dwc_otg_hcd_handle_hc_fsm(dwc_otg_hcd_t *hcd, uint32_t num)
 		} else if (hcint.b.ahberr) {
 			handle_hc_ahberr_intr(hcd, hc, hc_regs, qtd);
 		} else {
-			local_fiq_disable();
+			local_irq_disable();
 			BUG();
 		}
 		break;
@@ -2434,7 +2449,7 @@ void dwc_otg_hcd_handle_hc_fsm(dwc_otg_hcd_t *hcd, uint32_t num)
 		} else if (hcint.b.ahberr) {
 			handle_hc_ahberr_intr(hcd, hc, hc_regs, qtd);
 		} else {
-			local_fiq_disable();
+			local_irq_disable();
 			BUG();
 		}
 		break;

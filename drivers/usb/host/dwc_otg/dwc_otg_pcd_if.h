@@ -139,13 +139,13 @@ struct dwc_otg_pcd_function_ops {
  *
  * @param core_if The DWC_OTG Core
  */
-extern dwc_otg_pcd_t *dwc_otg_pcd_init(dwc_otg_core_if_t * core_if);
+extern dwc_otg_pcd_t *dwc_otg_pcd_init(void * memctx, dwc_otg_core_if_t * core_if);
 
 /** Frees PCD allocated by dwc_otg_pcd_init
  *
  * @param pcd The PCD
  */
-extern void dwc_otg_pcd_remove(dwc_otg_pcd_t * pcd);
+extern void dwc_otg_pcd_remove(void * memctx, dwc_otg_pcd_t * pcd);
 
 /** Call this to bind the function driver to the PCD Core.
  *

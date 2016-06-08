@@ -1345,13 +1345,16 @@ static inline uint32_t dwc_otg_read_common_intr(dwc_otg_core_if_t * core_if, gin
 	gintsts.d32 = DWC_READ_REG32(&core_if->core_global_regs->gintsts);
 	gintmsk.d32 = DWC_READ_REG32(&core_if->core_global_regs->gintmsk);
 	if(fiq_enable) {
-		local_fiq_disable();
+                unsigned long irqsave;
+//		local_irq_disable();
+                spin_lock_irqsave(&hcd->fiq_state->lock,irqsave);
 		/* Pull in the interrupts that the FIQ has masked */
 		gintmsk.d32 |= ~(hcd->fiq_state->gintmsk_saved.d32);
 		gintmsk.d32 |= gintmsk_common.d32;
 		/* for the upstairs function to reenable - have to read it here in case FIQ triggers again */
 		reenable_gintmsk->d32 = gintmsk.d32;
-		local_fiq_enable();
+//		local_irq_enable();
+                spin_unlock_irqrestore(&hcd->fiq_state->lock,irqsave);
 	}
 
 	gahbcfg.d32 = DWC_READ_REG32(&core_if->core_global_regs->gahbcfg);

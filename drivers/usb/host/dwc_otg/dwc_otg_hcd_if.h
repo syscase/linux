@@ -96,7 +96,7 @@ extern dwc_otg_hcd_t *dwc_otg_hcd_alloc_hcd(void);
  * Returns -DWC_E_NO_MEMORY if no enough memory.
  * Returns 0 on success
  */
-extern int dwc_otg_hcd_init(dwc_otg_hcd_t * hcd, dwc_otg_core_if_t * core_if);
+extern int dwc_otg_hcd_init(void *memctx, dwc_otg_hcd_t * hcd, dwc_otg_core_if_t * core_if);
 
 /** Frees HCD
  *

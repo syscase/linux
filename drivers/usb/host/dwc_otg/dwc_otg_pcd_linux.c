@@ -1207,7 +1207,7 @@ int pcd_init(dwc_bus_dev_t *_dev)
 
 	DWC_DEBUGPL(DBG_PCDV, "%s(%p) otg_dev=%p\n", __func__, _dev, otg_dev);
 
-	otg_dev->pcd = dwc_otg_pcd_init(otg_dev->core_if);
+	otg_dev->pcd = dwc_otg_pcd_init(&_dev->dev, otg_dev->core_if);
 
 	if (!otg_dev->pcd) {
 		DWC_ERROR("dwc_otg_pcd_init failed\n");
@@ -1225,6 +1225,7 @@ int pcd_init(dwc_bus_dev_t *_dev)
 	 * Setup interupt handler
 	 */
 #ifdef PLATFORM_INTERFACE
+        
 	DWC_DEBUGPL(DBG_ANY, "registering handler for irq%d\n",
                     platform_get_irq(_dev, fiq_enable ? 0 : 1));
 	retval = request_irq(platform_get_irq(_dev, fiq_enable ? 0 : 1), dwc_otg_pcd_irq,
@@ -1272,7 +1273,7 @@ void pcd_remove(dwc_bus_dev_t *_dev)
 #else
 	free_irq(_dev->irq, pcd);
 #endif
-	dwc_otg_pcd_remove(otg_dev->pcd);
+	dwc_otg_pcd_remove(_dev, otg_dev->pcd);
 	free_wrapper(gadget_wrapper);
 	otg_dev->pcd = 0;
 }

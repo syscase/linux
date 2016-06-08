@@ -183,6 +183,7 @@ typedef struct dwc_otg_pcd_ep {
  */
 struct dwc_otg_pcd {
 	const struct dwc_otg_pcd_function_ops *fops;
+        void *memctx;
 	/** The DWC otg device pointer */
 	struct dwc_otg_device *otg_dev;
 	/** Core Interface */
