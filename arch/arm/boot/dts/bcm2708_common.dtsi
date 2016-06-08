@@ -282,14 +282,6 @@
 			status = "disabled";
 		};
 
-#ifdef RPI364
-		usb: usb@7e980000 {
-			compatible = "brcm,bcm2835-usb";
-			reg = <0x7e980000 0x10000>;
-			interrupts = <1 9>;
-		};
-#else
-
 		usb: usb@7e980000 {
 			compatible = "brcm,bcm2708-usb";
 			reg = <0x7e980000 0x10000>,
@@ -297,7 +289,6 @@
 			interrupts = <2 0>,
 				     <1 9>;
 		};
-#endif
 
 		firmware: firmware {
 			compatible = "raspberrypi,bcm2835-firmware";
