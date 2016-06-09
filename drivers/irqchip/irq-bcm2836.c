@@ -184,12 +184,7 @@ __exception_irq_entry bcm2836_arm_irqchip_handle_irq(struct pt_regs *regs)
 #endif
 	} else if (stat) {
 		u32 hwirq = ffs(stat) - 1;
-
-#ifndef CONFIG_ARM64
-		handle_IRQ(irq_linear_revmap(intc.domain, hwirq), regs);
-#else
 		__handle_domain_irq(NULL, irq_linear_revmap(intc.domain, hwirq), false, regs);
-#endif
 	}
 }
 
