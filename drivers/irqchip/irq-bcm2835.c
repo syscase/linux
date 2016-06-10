@@ -110,10 +110,18 @@ static void armctrl_unmask_irq(struct irq_data *d)
 	writel_relaxed(HWIRQ_BIT(d->hwirq), intc.enable[HWIRQ_BANK(d->hwirq)]);
 }
 
+void bcm2836_arm_irqchip_spin_gpu_irq(void);
+
+static void armctrl_ack_irq(struct irq_data *d)
+{
+	bcm2836_arm_irqchip_spin_gpu_irq();
+}
+
 static struct irq_chip armctrl_chip = {
 	.name = "ARMCTRL-level",
 	.irq_mask = armctrl_mask_irq,
-	.irq_unmask = armctrl_unmask_irq
+	.irq_unmask = armctrl_unmask_irq,
+        .irq_ack    = armctrl_ack_irq
 };
 
 static int armctrl_xlate(struct irq_domain *d, struct device_node *ctrlr,

@@ -145,6 +145,25 @@ static void bcm2836_arm_irqchip_unmask_gpu_irq(struct irq_data *d)
 {
 }
 
+void bcm2836_arm_irqchip_spin_gpu_irq(void)
+{
+        u32 i;
+	void __iomem *gpurouting = (intc.base + LOCAL_GPU_ROUTING);
+	u32 routing_val = readl(gpurouting);
+
+        for( i = 1; i <= 4; i++ )
+        {
+            u32 new_routing_val = (routing_val + i) & 3;
+            if ( cpu_active(new_routing_val) )
+            {
+                writel(new_routing_val, gpurouting);
+                return;
+            }
+        }
+}
+
+EXPORT_SYMBOL(bcm2836_arm_irqchip_spin_gpu_irq);
+
 static struct irq_chip bcm2836_arm_irqchip_gpu = {
 	.name		= "bcm2836-gpu",
 	.irq_mask	= bcm2836_arm_irqchip_mask_gpu_irq,
