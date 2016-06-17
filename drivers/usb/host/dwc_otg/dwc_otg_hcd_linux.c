@@ -51,7 +51,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/version.h>
 #include <asm/io.h>
-#include <asm/fiq.h>
+//#include <asm/fiq.h>
 #include <linux/usb.h>
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,35)
 #include <../drivers/usb/core/hcd.h>
@@ -393,17 +393,36 @@ static struct dwc_otg_hcd_function_ops hcd_fops = {
 	.get_b_hnp_enable = _get_b_hnp_enable,
 };
 
-static struct fiq_handler fh = {
-  .name = "usb_fiq",
-};
+//static struct fiq_handler fh = {
+//  .name = "usb_fiq",
+//};
+
+irqreturn_t fiq_irq_handler(int irq, void *dev_id)
+{
+    dwc_otg_hcd_t *dwc_otg_hcd = (dwc_otg_hcd_t*)dev_id;
+
+    if (fiq_fsm_enable)
+    {
+        dwc_otg_fiq_fsm(dwc_otg_hcd->fiq_state,dwc_otg_hcd->core_if->core_params->host_channels);
+    }
+    else
+    {
+        dwc_otg_fiq_nop(dwc_otg_hcd->fiq_state);
+    }
+
+    return IRQ_HANDLED;
+
+}
 
 static void hcd_init_fiq(void *cookie)
 {
 	dwc_otg_device_t *otg_dev = cookie;
 	dwc_otg_hcd_t *dwc_otg_hcd = otg_dev->hcd;
-	struct pt_regs regs;
+//	struct pt_regs regs;
 	int irq;
+        int retval = 0;
 
+#if 0
 	if (claim_fiq(&fh)) {
 		DWC_ERROR("Can't claim FIQ");
 		BUG();
@@ -428,6 +447,7 @@ static void hcd_init_fiq(void *cookie)
 
 //		__show_regs(&regs);
 	set_fiq_regs(&regs);
+#endif
 
 	//Set the mphi periph to  the required registers
 	dwc_otg_hcd->fiq_state->mphi_regs.base    = otg_dev->os_dep.mphi_base;
@@ -445,18 +465,30 @@ static void hcd_init_fiq(void *cookie)
 	else
 		DWC_WARN("MPHI periph has NOT been enabled");
 #endif
+
 	// Enable FIQ interrupt from USB peripheral
-#ifdef CONFIG_MULTI_IRQ_HANDLER
+//#ifdef CONFIG_MULTI_IRQ_HANDLER
 	irq = platform_get_irq(otg_dev->os_dep.platformdev, 1);
-#else
-	irq = INTERRUPT_VC_USB;
-#endif
+//#else
+//	irq = INTERRUPT_VC_USB;
+//#endif
 	if (irq < 0) {
 		DWC_ERROR("Can't get FIQ irq");
 		return;
 	}
-	enable_fiq(irq);
-	local_fiq_enable();
+
+        retval = request_irq(irq, fiq_irq_handler, IRQF_SHARED, "dwc_otg_fiq", dwc_otg_hcd);
+
+        if ( retval < 0 )
+        { 
+             DWC_ERROR("Unable to request FIQ irq\n");
+             return;
+        }
+
+
+//	enable_irq(irq);
+//	local_irq_enable();
+
 }
 
 /**
@@ -518,18 +550,21 @@ int hcd_init(dwc_bus_dev_t *_dev)
 	    dwc_otg_hcd;
 	otg_dev->hcd = dwc_otg_hcd;
 
-	if (dwc_otg_hcd_init(dwc_otg_hcd, otg_dev->core_if)) {
+	if (dwc_otg_hcd_init(&_dev->dev, dwc_otg_hcd, otg_dev->core_if)) {
 		goto error2;
 	}
 
-	if (fiq_enable) {
+//	if (fiq_enable) {
+		hcd_init_fiq(otg_dev);
+#if 0
 		if (num_online_cpus() > 1) {
 			/* bcm2709: can run the FIQ on a separate core to IRQs */
 			smp_call_function_single(1, hcd_init_fiq, otg_dev, 1);
 		} else {
 			smp_call_function_single(0, hcd_init_fiq, otg_dev, 1);
 		}
-	}
+#endif
+//	}
 
 	otg_dev->hcd->otg_dev = otg_dev;
 	hcd->self.otg_port = dwc_otg_hcd_otg_port(dwc_otg_hcd);
@@ -965,7 +1000,7 @@ static irqreturn_t dwc_otg_hcd_irq(struct usb_hcd *hcd)
 	dwc_otg_hcd_t *dwc_otg_hcd = hcd_to_dwc_otg_hcd(hcd);
 	int32_t retval = dwc_otg_hcd_handle_intr(dwc_otg_hcd);
 	if (retval != 0) {
-		S3C2410X_CLEAR_EINTPEND();
+	    S3C2410X_CLEAR_EINTPEND();
 	}
 	return IRQ_RETVAL(retval);
 }

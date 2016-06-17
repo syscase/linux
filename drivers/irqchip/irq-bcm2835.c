@@ -54,7 +54,9 @@
 #include <linux/regmap.h>
 
 #include <asm/exception.h>
+#ifndef CONFIG_ARM64
 #include <asm/mach/irq.h>
+#endif
 
 /* Put the bank and irq (32 bits) into the hwirq */
 #define MAKE_HWIRQ(b, n)	(((b) << 5) | (n))
@@ -166,10 +168,18 @@ static void armctrl_unmask_irq(struct irq_data *d)
 	}
 }
 
+void bcm2836_arm_irqchip_spin_gpu_irq(void);
+
+static void armctrl_ack_irq(struct irq_data *d)
+{
+	bcm2836_arm_irqchip_spin_gpu_irq();
+}
+
 static struct irq_chip armctrl_chip = {
 	.name = "ARMCTRL-level",
 	.irq_mask = armctrl_mask_irq,
-	.irq_unmask = armctrl_unmask_irq
+	.irq_unmask = armctrl_unmask_irq,
+        .irq_ack    = armctrl_ack_irq
 };
 
 static int armctrl_xlate(struct irq_domain *d, struct device_node *ctrlr,
@@ -322,7 +332,7 @@ static void __exception_irq_entry bcm2835_handle_irq(
 	u32 hwirq;
 
 	while ((hwirq = get_next_armctrl_hwirq()) != ~0)
-		handle_IRQ(irq_linear_revmap(intc.domain, hwirq), regs);
+		__handle_domain_irq(NULL, irq_linear_revmap(intc.domain, hwirq), false, regs);
 }
 
 static void bcm2836_chained_handle_irq(struct irq_desc *desc)
