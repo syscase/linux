@@ -1167,11 +1167,15 @@ dwc_otg_pcd_t *dwc_otg_pcd_init(void *memctx, dwc_otg_core_if_t * core_if)
 	 * Initialize the DMA buffer for SETUP packets
 	 */
 	if (GET_CORE_IF(pcd)->dma_enable) {
+
+                DWC_PRINTF("DMA Enabled, allocating DMA buffer\n");
+
 		pcd->setup_pkt =
 		    DWC_DMA_ALLOC(memctx, sizeof(*pcd->setup_pkt) * 5,
 				  &pcd->setup_pkt_dma_handle);
 		if (pcd->setup_pkt == NULL) {
 			DWC_FREE(pcd);
+                        DWC_PRINTF("DMA alloc 1 failed\n");
 			return NULL;
 		}
 
@@ -1182,6 +1186,9 @@ dwc_otg_pcd_t *dwc_otg_pcd_init(void *memctx, dwc_otg_core_if_t * core_if)
 			DWC_DMA_FREE(memctx, sizeof(*pcd->setup_pkt) * 5,
 				     pcd->setup_pkt, pcd->setup_pkt_dma_handle);
 			DWC_FREE(pcd);
+
+                        DWC_PRINTF("DMA alloc 2 failed\n");
+
 			return NULL;
 		}
 
@@ -1249,6 +1256,7 @@ dwc_otg_pcd_t *dwc_otg_pcd_init(void *memctx, dwc_otg_core_if_t * core_if)
 		}
 	}
 
+        DWC_PRINTF("Calling pcd_reinit\n");
 	dwc_otg_pcd_reinit(pcd);
 
 	/* Allocate the cfi object for the PCD */

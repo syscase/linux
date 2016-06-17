@@ -1052,12 +1052,7 @@ int dwc_otg_hcd_init(void *memctx, dwc_otg_hcd_t * hcd, dwc_otg_core_if_t * core
 				sizeof(struct fiq_dma_channel) * num_channels);
 
 		DWC_MEMSET(hcd->fiq_dmab, 0x6b, 9024);
-		
-		for(i = 0; i < NR_BINS; i++) {
-			hcd->histogram_bins[i] = BIN_START + (i * BIN_STRIDE);
-			hcd->histogram_counts[i] = 0;
-		}
-		
+
 		/* pointer for debug in fiq_print */
 		hcd->fiq_state->fiq_dmab = hcd->fiq_dmab;
 		if (fiq_fsm_enable) {

@@ -1224,7 +1224,8 @@ int pcd_init(dwc_bus_dev_t *_dev)
 	/*
 	 * Setup interupt handler
 	 */
-#ifdef PLATFORM_INTERFACE    
+#ifdef PLATFORM_INTERFACE
+        
 	DWC_DEBUGPL(DBG_ANY, "registering handler for irq%d\n",
                     platform_get_irq(_dev, fiq_enable ? 0 : 1));
 	retval = request_irq(platform_get_irq(_dev, fiq_enable ? 0 : 1), dwc_otg_pcd_irq,

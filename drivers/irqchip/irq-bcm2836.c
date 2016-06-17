@@ -195,16 +195,15 @@ __exception_irq_entry bcm2836_arm_irqchip_handle_irq(struct pt_regs *regs)
 
 		writel(1 << ipi, mailbox0);
 #ifdef CONFIG_ARM64
-	dsb(ishst);
+		dsb(ishst);
 #else
-	dsb();
+		dsb();
 #endif
 		handle_IPI(ipi, regs);
 #endif
 	} else if (stat) {
 		u32 hwirq = ffs(stat) - 1;
-
-		handle_IRQ(irq_linear_revmap(intc.domain, hwirq), regs);
+		__handle_domain_irq(NULL, irq_linear_revmap(intc.domain, hwirq), false, regs);
 	}
 }
 
@@ -258,6 +257,7 @@ int __init bcm2836_smp_boot_secondary(unsigned int cpu,
 	unsigned long secondary_startup_phys =
 		(unsigned long)virt_to_phys((void *)secondary_startup);
 
+	dsb();
 	writel(secondary_startup_phys,
 	       intc.base + LOCAL_MAILBOX3_SET0 + 16 * cpu);
 
@@ -282,7 +282,7 @@ bcm2836_arm_irqchip_smp_init(void)
 	/* Unmask IPIs to the boot CPU. */
 	bcm2836_arm_irqchip_cpu_notify(&bcm2836_arm_irqchip_cpu_notifier,
 				       CPU_STARTING,
-				       (void *)smp_processor_id());
+				       (void *)(ptrdiff_t)smp_processor_id());
 	register_cpu_notifier(&bcm2836_arm_irqchip_cpu_notifier);
 
 	set_smp_cross_call(bcm2836_arm_irqchip_send_ipi);
