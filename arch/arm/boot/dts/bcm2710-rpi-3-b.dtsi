@@ -109,6 +109,10 @@
 	status = "okay";
 };
 
+&ft5406 {
+	status = "okay";
+};
+
 &uart0 {
 #ifndef RPI364
 	pinctrl-names = "default";

@@ -32,6 +32,7 @@
 		usb = &usb;
 		leds = &leds;
 		fb = &fb;
+                ft5406 = &ft5406;
 		vchiq = &vchiq;
 		thermal = &thermal;
 		clocks = &clocks;
@@ -355,6 +356,12 @@
 
 		fb: fb {
 			compatible = "brcm,bcm2708-fb";
+			firmware = <&firmware>;
+			status = "disabled";
+		};
+
+		ft5406: ft5406 {
+			compatible = "rpi,rpi-ft5406";
 			firmware = <&firmware>;
 			status = "disabled";
 		};
