@@ -69,7 +69,12 @@ EXPORT_SYMBOL_GPL(bcm_sg_suitable_for_dma);
 extern void bcm_dma_start(void __iomem *dma_chan_base,
 			  dma_addr_t control_block)
 {
+
+#ifdef CONFIG_ARM64
+	dsb(ishst);
+#else
 	dsb();	/* ARM data synchronization (push) operation */
+#endif
 
 	writel(control_block, dma_chan_base + BCM2708_DMA_ADDR);
 	writel(BCM2708_DMA_ACTIVE, dma_chan_base + BCM2708_DMA_CS);
@@ -78,7 +83,11 @@ EXPORT_SYMBOL_GPL(bcm_dma_start);
 
 extern void bcm_dma_wait_idle(void __iomem *dma_chan_base)
 {
+#ifdef CONFIG_ARM64
+	dsb(ishst);
+#else
 	dsb();
+#endif
 
 	/* ugly busy wait only option for now */
 	while (readl(dma_chan_base + BCM2708_DMA_CS) & BCM2708_DMA_ACTIVE)
@@ -88,7 +97,11 @@ EXPORT_SYMBOL_GPL(bcm_dma_wait_idle);
 
 extern bool bcm_dma_is_busy(void __iomem *dma_chan_base)
 {
+#ifdef CONFIG_ARM64
+	dsb(ishst);
+#else
 	dsb();
+#endif
 
 	return readl(dma_chan_base + BCM2708_DMA_CS) & BCM2708_DMA_ACTIVE;
 }

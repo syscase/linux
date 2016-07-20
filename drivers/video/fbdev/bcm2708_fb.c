@@ -24,7 +24,7 @@
 #include <linux/interrupt.h>
 #include <linux/ioport.h>
 #include <linux/list.h>
-//#include <linux/platform_data/dma-bcm2708.h>
+#include <linux/platform_data/dma-bcm2708.h>
 #include <linux/platform_device.h>
 #include <linux/clk.h>
 #include <linux/printk.h>
@@ -39,7 +39,7 @@
 #define MODULE_NAME "bcm2708_fb"
 
 #ifdef BCM2708_FB_DEBUG
-#define print_debug(fmt,...) pr_err("%s:%s:%d: "fmt, MODULE_NAME, __func__, __LINE__, ##__VA_ARGS__)
+#define print_debug(fmt,...) pr_debug("%s:%s:%d: "fmt, MODULE_NAME, __func__, __LINE__, ##__VA_ARGS__)
 #else
 #define print_debug(fmt,...)
 #endif
@@ -49,14 +49,14 @@ static const char *bcm2708_name = "BCM2708 FB";
 
 #define DRIVER_NAME "bcm2708_fb"
 
-static int fbwidth = 1920;  /* module parameter */
-static int fbheight = 1080; /* module parameter */
-static int fbdepth = 32;   /* module parameter */
-static int fbswap = 1;     /* module parameter */
+static int fbwidth = 800;  /* module parameter */
+static int fbheight = 480; /* module parameter */
+static int fbdepth = 16;   /* module parameter */
+static int fbswap = 0;     /* module parameter */
 
-//static u32 dma_busy_wait_threshold = 1<<15;
-//module_param(dma_busy_wait_threshold, int, 0644);
-//MODULE_PARM_DESC(dma_busy_wait_threshold, "Busy-wait for DMA completion below this area");
+static u32 dma_busy_wait_threshold = 1<<15;
+module_param(dma_busy_wait_threshold, int, 0644);
+MODULE_PARM_DESC(dma_busy_wait_threshold, "Busy-wait for DMA completion below this area");
 
 struct fb_alloc_tags {
 	struct rpi_firmware_property_tag_header tag1;
@@ -73,11 +73,11 @@ struct fb_alloc_tags {
 	u32 pitch;
 };
 
-//struct bcm2708_fb_stats {
-//	struct debugfs_regset32 regset;
-//	u32 dma_copies;
-//	u32 dma_irqs;
-//};
+struct bcm2708_fb_stats {
+	struct debugfs_regset32 regset;
+	u32 dma_copies;
+	u32 dma_irqs;
+};
 
 struct bcm2708_fb {
 	struct fb_info fb;
@@ -85,20 +85,18 @@ struct bcm2708_fb {
 	struct rpi_firmware *fw;
 	u32 cmap[16];
 	u32 gpu_cmap[256];
-//	int dma_chan;
-//	int dma_irq;
-//	void __iomem *dma_chan_base;
-//	void *cb_base;		/* DMA control blocks */
-//	dma_addr_t cb_handle;
-//	struct dentry *debugfs_dir;
-//	wait_queue_head_t dma_waitq;
-//	struct bcm2708_fb_stats stats;
+	int dma_chan;
+	int dma_irq;
+	void __iomem *dma_chan_base;
+	void *cb_base;		/* DMA control blocks */
+	dma_addr_t cb_handle;
+	struct dentry *debugfs_dir;
+	wait_queue_head_t dma_waitq;
+	struct bcm2708_fb_stats stats;
 	unsigned long fb_bus_address;
 };
 
 #define to_bcm2708(info)	container_of(info, struct bcm2708_fb, fb)
-
-#if 0
 
 static void bcm2708_fb_debugfs_deinit(struct bcm2708_fb *fb)
 {
@@ -142,8 +140,6 @@ fail:
 	bcm2708_fb_debugfs_deinit(fb);
 	return -EFAULT;
 }
-
-#endif
 
 static int bcm2708_fb_set_bitfields(struct fb_var_screeninfo *var)
 {
@@ -221,9 +217,6 @@ static int bcm2708_fb_set_bitfields(struct fb_var_screeninfo *var)
 static int bcm2708_fb_check_var(struct fb_var_screeninfo *var,
 				struct fb_info *info)
 {
-	/* info input, var output */
-//	int yres;
-
 	/* info input, var output */
 	print_debug("bcm2708_fb_check_var info(%p) %dx%d (%dx%d), %d, %d\n", info,
 		info->var.xres, info->var.yres, info->var.xres_virtual,
@@ -435,16 +428,16 @@ static int bcm2708_fb_pan_display(struct fb_var_screeninfo *var, struct fb_info 
 
 static int bcm2708_ioctl(struct fb_info *info, unsigned int cmd, unsigned long arg)
 {
-//	struct bcm2708_fb *fb = to_bcm2708(info);
-//	u32 dummy = 0;
+	struct bcm2708_fb *fb = to_bcm2708(info);
+	u32 dummy = 0;
 	int ret;
 
 	switch (cmd) {
-//	case FBIO_WAITFORVSYNC:
-//		ret = rpi_firmware_property(fb->fw,
-//					    //RPI_FIRMWARE_FRAMEBUFFER_SET_VSYNC,
-//					    &dummy, sizeof(dummy));
-//		break;
+	case FBIO_WAITFORVSYNC:
+		ret = rpi_firmware_property(fb->fw,
+					    RPI_FIRMWARE_FRAMEBUFFER_SET_VSYNC,
+					    &dummy, sizeof(dummy));
+		break;
 	default:
 		dev_dbg(info->device, "Unknown ioctl 0x%x\n", cmd);
 		return -ENOTTY;
@@ -462,7 +455,6 @@ static void bcm2708_fb_fillrect(struct fb_info *info,
 	cfb_fillrect(info, rect);
 }
 
-#if 0
 /* A helper function for configuring dma control block */
 static void set_dma_cb(struct bcm2708_dma_cb *cb,
 		       int        burst_size,
@@ -488,13 +480,10 @@ static void set_dma_cb(struct bcm2708_dma_cb *cb,
 	cb->pad[0] = 0;
 	cb->pad[1] = 0;
 }
-#endif
 
 static void bcm2708_fb_copyarea(struct fb_info *info,
 				const struct fb_copyarea *region)
 {
-	cfb_copyarea(info, region);
-#if 0
 	struct bcm2708_fb *fb = to_bcm2708(info);
 	struct bcm2708_dma_cb *cb = fb->cb_base;
 	int bytes_per_pixel = (info->var.bits_per_pixel + 7) >> 3;
@@ -609,7 +598,6 @@ static void bcm2708_fb_copyarea(struct fb_info *info,
 		fb->stats.dma_irqs++;
 	}
 	fb->stats.dma_copies++;
-#endif
 }
 
 static void bcm2708_fb_imageblit(struct fb_info *info,
@@ -618,8 +606,6 @@ static void bcm2708_fb_imageblit(struct fb_info *info,
 	/* (is called) print_debug("bcm2708_fb_imageblit\n"); */
 	cfb_imageblit(info, image);
 }
-
-#if 0
 
 static irqreturn_t bcm2708_fb_dma_irq(int irq, void *cxt)
 {
@@ -638,8 +624,6 @@ static irqreturn_t bcm2708_fb_dma_irq(int irq, void *cxt)
 	wake_up(&fb->dma_waitq);
 	return IRQ_HANDLED;
 }
-#endif
-
 
 static struct fb_ops bcm2708_fb_ops = {
 	.owner = THIS_MODULE,
@@ -690,7 +674,7 @@ static int bcm2708_fb_register(struct bcm2708_fb *fb)
 	fb->fb.monspecs.dclkmax = 100000000;
 
 	bcm2708_fb_set_bitfields(&fb->fb.var);
-//	init_waitqueue_head(&fb->dma_waitq);
+	init_waitqueue_head(&fb->dma_waitq);
 
 	/*
 	 * Allocate colourmap.
@@ -741,9 +725,8 @@ static int bcm2708_fb_probe(struct platform_device *dev)
 	}
 
 	fb->fw = fw;
-//	bcm2708_fb_debugfs_init(fb);
+	bcm2708_fb_debugfs_init(fb);
 
-#if 0
 	fb->cb_base = dma_alloc_writecombine(&dev->dev, SZ_64K,
 					     &fb->cb_handle, GFP_KERNEL);
 	if (!fb->cb_base) {
@@ -773,7 +756,6 @@ static int bcm2708_fb_probe(struct platform_device *dev)
 
 	pr_info("BCM2708FB: allocated DMA channel %d @ %p\n",
 	       fb->dma_chan, fb->dma_chan_base);
-#endif
 
 	fb->dev = dev;
 	fb->fb.device = &dev->dev;
@@ -784,11 +766,11 @@ static int bcm2708_fb_probe(struct platform_device *dev)
 		goto out;
 	}
 
-//free_dma_chan:
-//	bcm_dma_chan_free(fb->dma_chan);
-//free_cb:
-//	dma_free_writecombine(&dev->dev, SZ_64K, fb->cb_base, fb->cb_handle);
-//free_fb:
+free_dma_chan:
+	bcm_dma_chan_free(fb->dma_chan);
+free_cb:
+	dma_free_writecombine(&dev->dev, SZ_64K, fb->cb_base, fb->cb_handle);
+free_fb:
 	kfree(fb);
 free_region:
 	dev_err(&dev->dev, "probe failed, err %d\n", ret);
@@ -806,12 +788,12 @@ static int bcm2708_fb_remove(struct platform_device *dev)
 		iounmap(fb->fb.screen_base);
 	unregister_framebuffer(&fb->fb);
 
-//	dma_free_writecombine(&dev->dev, SZ_64K, fb->cb_base, fb->cb_handle);
-//	bcm_dma_chan_free(fb->dma_chan);
+	dma_free_writecombine(&dev->dev, SZ_64K, fb->cb_base, fb->cb_handle);
+	bcm_dma_chan_free(fb->dma_chan);
 
-//	bcm2708_fb_debugfs_deinit(fb);
+	bcm2708_fb_debugfs_deinit(fb);
 
-//	free_irq(fb->dma_irq, fb);
+	free_irq(fb->dma_irq, fb);
 
 	kfree(fb);
 
