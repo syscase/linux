@@ -105,6 +105,10 @@
 	};
 };
 
+&dma {
+        status = "okay";
+};
+
 &fb {
 	status = "okay";
 };
