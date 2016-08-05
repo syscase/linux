@@ -16,7 +16,7 @@
 &gpio {
 
 #ifdef RPI364
-	pinctrl-0 = <&sdhost_pins &sdio_pins &bt_pins &uart0_pins &uart1_pins>;
+	pinctrl-0 = <&sdhost_pins &sdio_pins>;
 #endif
 	sdhost_pins: sdhost_pins {
 		brcm,pins = <48 49 50 51 52 53>;
@@ -118,18 +118,14 @@
 };
 
 &uart0 {
-#ifndef RPI364
 	pinctrl-names = "default";
 	pinctrl-0 = <&uart0_pins &bt_pins>;
-#endif
 	status = "okay";
 };
 
 &uart1 {
-#ifndef RPI364
 	pinctrl-names = "default";
 	pinctrl-0 = <&uart1_pins>;
-#endif
 	status = "okay";
 };
 

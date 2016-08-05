@@ -36,6 +36,7 @@ obj-$(CONFIG_PINCTRL_ST) 	+= pinctrl-st.o
 obj-$(CONFIG_PINCTRL_ZYNQ)	+= pinctrl-zynq.o
 
 obj-$(CONFIG_ARCH_BCM2708)$(CONFIG_ARCH_BCM2709) += bcm/
+obj-$(CONFIG_ARCH_BCM2835)      += bcm/
 obj-$(CONFIG_ARCH_BCM)		+= bcm/
 obj-$(CONFIG_PINCTRL_BERLIN)	+= berlin/
 obj-y				+= freescale/

@@ -17,9 +17,11 @@ config PINCTRL_BCM281XX
 	  framework.  GPIO is provided by a separate GPIO driver.
 
 config PINCTRL_BCM2835
-	bool
+	bool "Broadcom BCM2835 pinctrl driver"
+        depends on OF && (ARCH_BCM2835 || COMPILE_TEST)
 	select PINMUX
 	select PINCONF
+	default ARCH_BCM2835
 
 config PINCTRL_IPROC_GPIO
 	bool "Broadcom iProc GPIO (with PINCONF) driver"
