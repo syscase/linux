@@ -15,9 +15,6 @@
 
 &gpio {
 
-#ifdef RPI364
-	pinctrl-0 = <&sdhost_pins &sdio_pins>;
-#endif
 	sdhost_pins: sdhost_pins {
 		brcm,pins = <48 49 50 51 52 53>;
 		brcm,function = <4>; /* alt0 */
@@ -74,21 +71,15 @@
 };
 
 &sdhost {
-#ifndef RPI364
 	pinctrl-names = "default";
 	pinctrl-0 = <&sdhost_pins>;
-#endif
 	bus-width = <4>;
-#ifndef RPI364
 	status = "okay";
-#endif
 };
 
 &mmc {
-#ifndef RPI364
 	pinctrl-names = "default";
 	pinctrl-0 = <&sdio_pins>;
-#endif
 	non-removable;
 	bus-width = <4>;
 	status = "okay";
@@ -130,10 +121,8 @@
 };
 
 &spi0 {
-#ifndef RPI364
 	pinctrl-names = "default";
 	pinctrl-0 = <&spi0_pins &spi0_cs_pins>;
-#endif
 	cs-gpios = <&gpio 8 1>, <&gpio 7 1>;
 
 	spidev0: spidev@0{
@@ -154,18 +143,14 @@
 };
 
 &i2c0 {
-#ifndef RPI364
 	pinctrl-names = "default";
 	pinctrl-0 = <&i2c0_pins>;
-#endif
 	clock-frequency = <100000>;
 };
 
 &i2c1 {
-#ifndef RPI364
 	pinctrl-names = "default";
 	pinctrl-0 = <&i2c1_pins>;
-#endif
 	clock-frequency = <100000>;
 };
 
@@ -175,10 +160,8 @@
 
 &i2s {
 	#sound-dai-cells = <0>;
-#ifndef RPI364
 	pinctrl-names = "default";
 	pinctrl-0 = <&i2s_pins>;
-#endif
 };
 
 &random {
