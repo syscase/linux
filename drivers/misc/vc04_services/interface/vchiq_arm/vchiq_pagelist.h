@@ -42,6 +42,8 @@
 #define PAGELIST_READ 1
 #define PAGELIST_READ_WITH_FRAGMENTS 2
 
+#if !defined(CONFIG_ARM64)
+
 typedef struct pagelist_struct {
 	unsigned long length;
 	unsigned short type;
@@ -49,6 +51,19 @@ typedef struct pagelist_struct {
 	unsigned long addrs[1];	/* N.B. 12 LSBs hold the number of following
 				   pages at consecutive addresses. */
 } PAGELIST_T;
+
+#else
+
+typedef struct pagelist_struct {
+        u32 length;
+        u16 type;
+        u16 offset;
+        u32 addrs[1]; /* N.B. 12 LSBs hold the number of following
+                      pages at consecutive addresses. */
+} PAGELIST_T;
+
+
+#endif
 
 typedef struct fragments_struct {
 	char headbuf[CACHE_LINE_SIZE];
