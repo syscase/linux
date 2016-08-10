@@ -1,3 +1,37 @@
+64 BIT Linux Kernel For RPI 3
+
+BUILDING - I do this from a 64 bit chroot on debian amd64 with the aarch64 cross compilers installed:
+make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j8 bcmrpi3_defconfig
+make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j8
+make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j8 modules_install
+
+This installs the modules in the /lib/modules directory of the chroot.
+
+INSTALLING - Assuming the RPI 3 media is mounted at /mnt and /mnt/boot
+cp arch/arm64/boot/Image /mnt/boot/kernel8.img
+cp arch/arm64/boot/dts/broadcom/bcm2710-rpi-3-b.dtb /mnt/boot
+cp -rv /lib/modules/* /mnt/lib/modules/
+
+If you have a relatively new version of the firmware, no config.txt changes should be needed. It may be necessary to delete the other *.img and vmlinuz images. Of course, if you are using a custom kernel or initrd that will need to changed or removed.
+
+WHAT'S NEW:
+1. Built off the foundation 4.6 linux tree.
+2. Uses dwc_otg driver for USB(More features and performance)
+3. DMA support for unaccelerated video(Improves performance)
+4. PI Foundation touch screen support
+5. HDMI audio
+6. Builtin wifi(Needs /lib/firmware/brcm/* files from the raspbian image)
+7. Builtin bluetooth(Needs /lib/firmware/brcm/* files + bluez source patches from raspbian source code)
+8. Several other misc drivers added back in that are included in raspbian(GPIO, SPI, I2C etc..)
+
+MAJOR KNOWN ISSUES:
+1. HDMI audio has serious performance issues but it does work.
+2. VCHIQ driver needs a 32 bit compatible layer for direct calls from 32bit userland.
+3. Newer versions of systemd as distributed by debian arm64 sid needs some of the security features disabled. The symptom is systemd-logind.service and a few other services may not start.
+
+
+---------------------------Offical Linux Readme -----------------------------------
+
         Linux kernel release 4.x <http://kernel.org/>
 
 These are the release notes for Linux version 4.  Read them carefully,
