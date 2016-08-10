@@ -798,7 +798,7 @@ vchiq_prepare_bulk_data(VCHIQ_BULK_T *bulk, VCHI_MEM_HANDLE_T memhandle,
             return VCHIQ_ERROR;
         }
 
-        pagelist->addrs[0] = (u32)size | (u32)num_pages;
+        pagelist->addrs[0] = (u32)(bulkdata->dmaaddr) | (u32)num_pages;
         
 
 	bulk->handle = memhandle;
