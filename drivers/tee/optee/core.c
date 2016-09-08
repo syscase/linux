@@ -80,7 +80,7 @@ int optee_from_msg_param(struct tee_param *params, size_t num_params,
 			rc = tee_shm_get_pa(shm, 0, &pa);
 			if (rc)
 				return rc;
-			p->u.memref.shm_offs = pa - mp->u.tmem.buf_ptr;
+			p->u.memref.shm_offs = mp->u.tmem.buf_ptr - pa;
 			p->u.memref.shm = shm;
 
 			/* Check that the memref is covered by the shm object */
