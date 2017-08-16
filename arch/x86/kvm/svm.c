@@ -4307,6 +4307,16 @@ static void svm_sched_in(struct kvm_vcpu *vcpu, int cpu)
 {
 }
 
+#ifdef CONFIG_KVM_VMX_PT
+static int setup_trace_fd_stub(struct kvm_vcpu *vcpu){
+	return -EINVAL;
+}
+static int vmx_pt_is_enabled(void){
+	/* AMD CPUs do not support Intel PT */
+	return -EINVAL;
+}
+#endif	
+
 static struct kvm_x86_ops svm_x86_ops = {
 	.cpu_has_kvm_support = has_svm,
 	.disabled_by_bios = is_disabled,
@@ -4415,6 +4425,11 @@ static struct kvm_x86_ops svm_x86_ops = {
 	.sched_in = svm_sched_in,
 
 	.pmu_ops = &amd_pmu_ops,
+	
+#ifdef CONFIG_KVM_VMX_PT
+	.setup_trace_fd = setup_trace_fd_stub,
+	.vmx_pt_enabled = vmx_pt_is_enabled,
+#endif	
 };
 
 static int __init svm_init(void)
