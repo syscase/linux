@@ -992,6 +992,11 @@ struct kvm_x86_ops {
 	void (*post_block)(struct kvm_vcpu *vcpu);
 	int (*update_pi_irte)(struct kvm *kvm, unsigned int host_irq,
 			      uint32_t guest_irq, bool set);
+			
+#ifdef CONFIG_KVM_VMX_PT
+	int (*setup_trace_fd)(struct kvm_vcpu *vcpu);
+	int (*vmx_pt_enabled)(void);
+#endif	
 };
 
 struct kvm_arch_async_pf {

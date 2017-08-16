@@ -52,6 +52,11 @@
 #include "trace.h"
 #include "pmu.h"
 
+#ifdef CONFIG_KVM_VMX_PT
+#include "vmx_pt.h"
+static int handle_monitor_trap(struct kvm_vcpu *vcpu);
+#endif
+
 #define __ex(x) __kvm_handle_fault_on_reboot(x)
 #define __ex_clear(x, reg) \
 	____kvm_handle_fault_on_reboot(x, "xor " reg " , " reg)
@@ -519,6 +524,9 @@ static inline int pi_test_sn(struct pi_desc *pi_desc)
 }
 
 struct vcpu_vmx {
+#ifdef CONFIG_KVM_VMX_PT
+	struct vcpu_vmx_pt*   vmx_pt_config;
+#endif
 	struct kvm_vcpu       vcpu;
 	unsigned long         host_rsp;
 	u8                    fail;
@@ -1606,7 +1614,11 @@ static __always_inline void vmcs_set_bits(unsigned long field, u32 mask)
 static inline void vm_entry_controls_init(struct vcpu_vmx *vmx, u32 val)
 {
 	vmcs_write32(VM_ENTRY_CONTROLS, val);
+#ifdef CONFIG_KVM_VMX_PT
+	vmx->vm_entry_controls_shadow = val | 0x20000ULL;	/* Conceal VM entries from Intel PT */
+#else
 	vmx->vm_entry_controls_shadow = val;
+#endif
 }
 
 static inline void vm_entry_controls_set(struct vcpu_vmx *vmx, u32 val)
@@ -1634,7 +1646,11 @@ static inline void vm_entry_controls_clearbit(struct vcpu_vmx *vmx, u32 val)
 static inline void vm_exit_controls_init(struct vcpu_vmx *vmx, u32 val)
 {
 	vmcs_write32(VM_EXIT_CONTROLS, val);
+#ifdef CONFIG_KVM_VMX_PT
+	vmx->vm_exit_controls_shadow = val | 0x1000000ULL;	/* Conceal VM exit from Intel PT */
+#else
 	vmx->vm_exit_controls_shadow = val;
+#endif
 }
 
 static inline void vm_exit_controls_set(struct vcpu_vmx *vmx, u32 val)
@@ -1798,7 +1814,7 @@ static void add_atomic_switch_msr_special(struct vcpu_vmx *vmx,
 	vm_exit_controls_setbit(vmx, exit);
 }
 
-static void add_atomic_switch_msr(struct vcpu_vmx *vmx, unsigned msr,
+void add_atomic_switch_msr(struct vcpu_vmx *vmx, unsigned msr,
 				  u64 guest_val, u64 host_val)
 {
 	unsigned i;
@@ -3343,10 +3359,10 @@ static __init int setup_vmcs_config(struct vmcs_config *vmcs_conf)
 	vmcs_conf->revision_id = vmx_msr_low;
 
 	vmcs_conf->pin_based_exec_ctrl = _pin_based_exec_control;
-	vmcs_conf->cpu_based_exec_ctrl = _cpu_based_exec_control;
+	vmcs_conf->cpu_based_exec_ctrl = _cpu_based_exec_control | 0x80000;
 	vmcs_conf->cpu_based_2nd_exec_ctrl = _cpu_based_2nd_exec_control;
-	vmcs_conf->vmexit_ctrl         = _vmexit_control;
-	vmcs_conf->vmentry_ctrl        = _vmentry_control;
+	vmcs_conf->vmexit_ctrl         = _vmexit_control | 0x1000000;
+	vmcs_conf->vmentry_ctrl        = _vmentry_control | 0x20000;
 
 	cpu_has_load_ia32_efer =
 		allow_1_setting(MSR_IA32_VMX_ENTRY_CTLS,
@@ -4807,6 +4823,7 @@ static u32 vmx_exec_control(struct vcpu_vmx *vmx)
 		exec_control |= CPU_BASED_CR3_STORE_EXITING |
 				CPU_BASED_CR3_LOAD_EXITING  |
 				CPU_BASED_INVLPG_EXITING;
+				
 	return exec_control;
 }
 
@@ -5442,7 +5459,6 @@ static int handle_io(struct kvm_vcpu *vcpu)
 	unsigned long exit_qualification;
 	int size, in, string;
 	unsigned port;
-
 	exit_qualification = vmcs_readl(EXIT_QUALIFICATION);
 	string = (exit_qualification & 16) != 0;
 	in = (exit_qualification & 8) != 0;
@@ -8243,6 +8259,7 @@ static int vmx_handle_exit(struct kvm_vcpu *vcpu)
 	if (exit_reason < kvm_vmx_max_exit_handlers
 	    && kvm_vmx_exit_handlers[exit_reason])
 		return kvm_vmx_exit_handlers[exit_reason](vcpu);
+
 	else {
 		WARN_ONCE(1, "vmx: unexpected exit reason 0x%x\n", exit_reason);
 		kvm_queue_exception(vcpu, UD_VECTOR);
@@ -8616,6 +8633,10 @@ static void __noclone vmx_vcpu_run(struct kvm_vcpu *vcpu)
 	struct vcpu_vmx *vmx = to_vmx(vcpu);
 	unsigned long debugctlmsr, cr4;
 
+#ifdef CONFIG_KVM_VMX_PT
+	vmx_pt_vmentry(vmx->vmx_pt_config);
+#endif
+
 	/* Record the guest's net vcpu time for enforced NMI injections. */
 	if (unlikely(!cpu_has_virtual_nmis() && vmx->soft_vnmi_blocked))
 		vmx->entry_time = ktime_get();
@@ -8823,6 +8844,10 @@ static void __noclone vmx_vcpu_run(struct kvm_vcpu *vcpu)
 	vmx_complete_atomic_exit(vmx);
 	vmx_recover_nmi_blocking(vmx);
 	vmx_complete_interrupts(vmx);
+	
+	#ifdef CONFIG_KVM_VMX_PT
+		vmx_pt_vmexit(vmx->vmx_pt_config);
+	#endif
 }
 
 static void vmx_load_vmcs01(struct kvm_vcpu *vcpu)
@@ -8853,6 +8878,11 @@ static void vmx_free_vcpu(struct kvm_vcpu *vcpu)
 	free_nested(vmx);
 	free_loaded_vmcs(vmx->loaded_vmcs);
 	kfree(vmx->guest_msrs);
+	
+#ifdef CONFIG_KVM_VMX_PT
+	/* free vmx_pt */
+	vmx_pt_destroy(vmx, &(vmx->vmx_pt_config));
+#endif
 	kvm_vcpu_uninit(vcpu);
 	kmem_cache_free(kvm_vcpu_cache, vmx);
 }
@@ -8934,6 +8964,11 @@ static struct kvm_vcpu *vmx_create_vcpu(struct kvm *kvm, unsigned int id)
 		if (err)
 			goto free_vmcs;
 	}
+
+#ifdef CONFIG_KVM_VMX_PT
+	/* enable vmx_pt */
+	vmx_pt_setup(vmx, &(vmx->vmx_pt_config));
+#endif
 
 	return &vmx->vcpu;
 
@@ -10889,6 +10924,16 @@ out:
 	return ret;
 }
 
+#ifdef CONFIG_KVM_VMX_PT
+static int vmx_pt_setup_fd(struct kvm_vcpu *vcpu){
+	return vmx_pt_create_fd(to_vmx(vcpu)->vmx_pt_config);
+}
+
+static int vmx_pt_is_enabled(void){
+	return vmx_pt_enabled();
+}
+#endif	
+
 static struct kvm_x86_ops vmx_x86_ops = {
 	.cpu_has_kvm_support = cpu_has_kvm_support,
 	.disabled_by_bios = vmx_disabled_by_bios,
@@ -11013,6 +11058,11 @@ static struct kvm_x86_ops vmx_x86_ops = {
 	.pmu_ops = &intel_pmu_ops,
 
 	.update_pi_irte = vmx_update_pi_irte,
+	
+#ifdef CONFIG_KVM_VMX_PT
+	.setup_trace_fd = vmx_pt_setup_fd,
+	.vmx_pt_enabled = vmx_pt_is_enabled,
+#endif	
 };
 
 static int __init vmx_init(void)
@@ -11027,6 +11077,9 @@ static int __init vmx_init(void)
 			   crash_vmclear_local_loaded_vmcss);
 #endif
 
+#ifdef CONFIG_KVM_VMX_PT
+	vmx_pt_init();
+#endif
 	return 0;
 }
 
@@ -11036,7 +11089,9 @@ static void __exit vmx_exit(void)
 	RCU_INIT_POINTER(crash_vmclear_loaded_vmcss, NULL);
 	synchronize_rcu();
 #endif
-
+#ifdef CONFIG_KVM_VMX_PT
+	vmx_pt_exit();
+#endif
 	kvm_exit();
 }
 
