@@ -5342,6 +5342,16 @@ static void svm_sched_in(struct kvm_vcpu *vcpu, int cpu)
 {
 }
 
+#ifdef CONFIG_KVM_VMX_PT
+static int setup_trace_fd_stub(struct kvm_vcpu *vcpu){
+	return -EINVAL;
+}
+static int vmx_pt_is_enabled(void){
+	/* AMD CPUs do not support Intel PT */
+	return -EINVAL;
+}
+#endif	
+
 static inline void avic_post_state_restore(struct kvm_vcpu *vcpu)
 {
 	if (avic_handle_apic_id_update(vcpu) != 0)
@@ -5467,6 +5477,11 @@ static struct kvm_x86_ops svm_x86_ops __ro_after_init = {
 	.deliver_posted_interrupt = svm_deliver_avic_intr,
 	.update_pi_irte = svm_update_pi_irte,
 	.setup_mce = svm_setup_mce,
+	
+#ifdef CONFIG_KVM_VMX_PT
+	.setup_trace_fd = setup_trace_fd_stub,
+	.vmx_pt_enabled = vmx_pt_is_enabled,
+#endif	
 };
 
 static int __init svm_init(void)

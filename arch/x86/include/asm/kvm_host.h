@@ -1058,6 +1058,11 @@ struct kvm_x86_ops {
 	void (*cancel_hv_timer)(struct kvm_vcpu *vcpu);
 
 	void (*setup_mce)(struct kvm_vcpu *vcpu);
+			
+#ifdef CONFIG_KVM_VMX_PT
+	int (*setup_trace_fd)(struct kvm_vcpu *vcpu);
+	int (*vmx_pt_enabled)(void);
+#endif	
 };
 
 struct kvm_arch_async_pf {
